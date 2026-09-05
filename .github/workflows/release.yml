@@ -1,0 +1,47 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.1"
+          coverage: none
+          tools: composer:v2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: composer install --no-interaction --prefer-dist
+      - run: composer test
+      - run: composer phpstan
+      - run: composer phpcs
+      - run: npm ci
+      - run: npm audit --omit=dev
+      - run: npm run lint:js
+      - run: npm run build
+      - run: sudo apt-get update && sudo apt-get install --yes gettext
+      - name: Validate Arabic catalog completeness
+        run: |
+          xgettext --language=PHP --from-code=UTF-8 --keyword=__:1 --keyword=esc_html__:1 --keyword=esc_attr__:1 --output=/tmp/skypay.pot skypay-woocommerce.php includes/*.php
+          msgfmt --check --output-file=/tmp/skypay-ar.mo languages/skypay-woocommerce-ar.po
+          msgcmp languages/skypay-woocommerce-ar.po /tmp/skypay.pot
+      - run: python3 bin/build-zip.py
+      - run: python3 bin/validate-zip.py dist/skypay-woocommerce.zip
+      - run: cd dist && sha256sum --check skypay-woocommerce.zip.sha256
+      - uses: softprops/action-gh-release@v2
+        with:
+          prerelease: ${{ contains(github.ref_name, 'beta') }}
+          files: |
+            dist/skypay-woocommerce.zip
+            dist/skypay-woocommerce.zip.sha256

@@ -1,0 +1,14 @@
+parameters:
+  level: 6
+  treatPhpDocTypesAsCertain: false
+  bootstrapFiles:
+    - tests/phpstan-bootstrap.php
+  paths:
+    - includes
+    - skypay-woocommerce.php
+  scanFiles:
+    - vendor/php-stubs/wordpress-stubs/wordpress-stubs.php
+    - vendor/php-stubs/woocommerce-stubs/woocommerce-stubs.php
+  excludePaths:
+    analyse:
+      - assets

@@ -1,0 +1,170 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: SkyPay for WooCommerce 0.1.0-beta.1\n"
+"PO-Revision-Date: 2026-09-05 00:00+0200\n"
+"Last-Translator: SkyPay\n"
+"Language-Team: Arabic\n"
+"Language: ar\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=6; plural=n==0 ? 0 : n==1 ? 1 : n==2 ? 2 : n%100>=3 && n%100<=10 ? 3 : n%100>=11 && n%100<=99 ? 4 : 5;\n"
+
+msgid "SkyPay"
+msgstr "سكاي باي"
+
+msgid "SkyPay for WooCommerce requires PHP 8.1 or newer."
+msgstr "تتطلب إضافة سكاي باي لـ WooCommerce إصدار PHP 8.1 أو أحدث."
+
+msgid "SkyPay for WooCommerce requires WordPress 6.4 or newer."
+msgstr "تتطلب إضافة سكاي باي لـ WooCommerce إصدار WordPress 6.4 أو أحدث."
+
+msgid "SkyPay for WooCommerce requires WooCommerce 9.0 or newer."
+msgstr "تتطلب إضافة سكاي باي لـ WooCommerce إصدار WooCommerce 9.0 أو أحدث."
+
+msgid "SkyPay could not be reached. Please try again."
+msgstr "تعذر الاتصال بسكاي باي. يرجى المحاولة مرة أخرى."
+
+msgid "SkyPay could not secure the checkout return. Please try again."
+msgstr "تعذر على سكاي باي تأمين عودة عملية الدفع. يرجى المحاولة مرة أخرى."
+
+msgid "SkyPay rejected the request."
+msgstr "رفضت سكاي باي الطلب."
+
+msgid "SkyPay request failed."
+msgstr "فشل طلب سكاي باي."
+
+msgid "SkyPay order reference is missing."
+msgstr "مرجع طلب سكاي باي مفقود."
+
+msgid "SkyPay gateway is unavailable."
+msgstr "بوابة سكاي باي غير متاحة."
+
+msgid "SkyPay confirmation was rejected because the order reference, merchant, amount, or currency did not match."
+msgstr "رُفض تأكيد سكاي باي لعدم تطابق مرجع الطلب أو التاجر أو المبلغ أو العملة."
+
+msgid "SkyPay payment confirmed by %s."
+msgstr "تم تأكيد دفعة سكاي باي عبر %s."
+
+msgid "SkyPay reported that the payment failed."
+msgstr "أفادت سكاي باي بفشل عملية الدفع."
+
+msgid "SkyPay requires a manual payment review."
+msgstr "تتطلب دفعة سكاي باي مراجعة يدوية."
+
+msgid "SkyPay payment is awaiting authoritative confirmation."
+msgstr "دفعة سكاي باي بانتظار التأكيد الموثوق."
+
+msgid "A SkyPay return request with an invalid token was rejected."
+msgstr "رُفض طلب عودة من سكاي باي بسبب رمز غير صالح."
+
+msgid "The customer returned from SkyPay using the cancellation path. Payment confirmation is still pending."
+msgstr "عاد العميل من سكاي باي عبر مسار الإلغاء. لا يزال تأكيد الدفع معلقاً."
+
+msgid "Pay securely using SkyPay."
+msgstr "ادفع بأمان باستخدام سكاي باي."
+
+msgid "Accept one-time LYD payments through SkyPay-hosted checkout."
+msgstr "اقبل دفعات الدينار الليبي لمرة واحدة عبر صفحة دفع مستضافة من سكاي باي."
+
+msgid "Enable SkyPay"
+msgstr "تفعيل سكاي باي"
+
+msgid "Offer SkyPay at checkout"
+msgstr "إظهار سكاي باي في صفحة الدفع"
+
+msgid "Checkout title"
+msgstr "عنوان وسيلة الدفع"
+
+msgid "The payment method title shown to shoppers."
+msgstr "عنوان وسيلة الدفع الظاهر للمتسوقين."
+
+msgid "Checkout description"
+msgstr "وصف وسيلة الدفع"
+
+msgid "The short description shown at checkout."
+msgstr "الوصف المختصر الظاهر في صفحة الدفع."
+
+msgid "Mode"
+msgstr "الوضع"
+
+msgid "TEST"
+msgstr "اختبار"
+
+msgid "LIVE"
+msgstr "فعلي"
+
+msgid "The API key must match this mode."
+msgstr "يجب أن يتطابق مفتاح API مع هذا الوضع."
+
+msgid "SkyPay API key"
+msgstr "مفتاح API لسكاي باي"
+
+msgid "Create this key in SkyPay Developers. Leave blank to preserve the saved value."
+msgstr "أنشئ هذا المفتاح في قسم المطورين بسكاي باي. اترك الحقل فارغاً للاحتفاظ بالقيمة المحفوظة."
+
+msgid "Webhook signing secret"
+msgstr "سر توقيع الويب هوك"
+
+msgid "Paste the secret shown once when the webhook endpoint is created."
+msgstr "ألصق السر الذي يظهر مرة واحدة عند إنشاء نقطة الويب هوك."
+
+msgid "Webhook URL"
+msgstr "رابط الويب هوك"
+
+msgid "Connection"
+msgstr "الاتصال"
+
+msgid "Debug logging"
+msgstr "سجل تصحيح الأخطاء"
+
+msgid "Write redacted SkyPay events to WooCommerce logs"
+msgstr "كتابة أحداث سكاي باي المنقحة في سجلات WooCommerce"
+
+msgid "Do not leave debug logging enabled longer than necessary."
+msgstr "لا تترك سجل تصحيح الأخطاء مفعلاً لمدة أطول من اللازم."
+
+msgid "Testing…"
+msgstr "جارٍ الاختبار…"
+
+msgid "Connection failed."
+msgstr "فشل الاتصال."
+
+msgid "Register this URL for payment.completed in SkyPay Developers."
+msgstr "سجل هذا الرابط لحدث payment.completed في قسم المطورين بسكاي باي."
+
+msgid "Test connection"
+msgstr "اختبار الاتصال"
+
+msgid "The WooCommerce order could not be loaded."
+msgstr "تعذر تحميل طلب WooCommerce."
+
+msgid "SkyPay supports LYD orders only."
+msgstr "تدعم سكاي باي الطلبات بعملة الدينار الليبي فقط."
+
+msgid "The existing SkyPay checkout no longer matches this order. Please contact the store administrator."
+msgstr "لم تعد صفحة دفع سكاي باي الحالية تطابق هذا الطلب. يرجى التواصل مع مدير المتجر."
+
+msgid "WooCommerce order #%s"
+msgstr "طلب WooCommerce رقم %s"
+
+msgid "SkyPay returned an invalid checkout response."
+msgstr "أعادت سكاي باي استجابة دفع غير صالحة."
+
+msgid "SkyPay hosted checkout created. Awaiting signed or server-verified confirmation."
+msgstr "تم إنشاء صفحة دفع سكاي باي المستضافة. بانتظار تأكيد موقع أو متحقق منه عبر الخادم."
+
+msgid "The configured SkyPay mode no longer matches this order."
+msgstr "لم يعد وضع سكاي باي المحدد يطابق هذا الطلب."
+
+msgid "The SkyPay API key is unavailable."
+msgstr "مفتاح API لسكاي باي غير متاح."
+
+msgid "You are not allowed to manage WooCommerce payments."
+msgstr "ليس لديك صلاحية إدارة مدفوعات WooCommerce."
+
+msgid "The API key is valid but does not match the selected mode."
+msgstr "مفتاح API صالح لكنه لا يطابق الوضع المحدد."
+
+msgid "Connected to %1$s in %2$s mode."
+msgstr "تم الاتصال بـ %1$s في وضع %2$s."

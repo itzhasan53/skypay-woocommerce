@@ -1,0 +1,110 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  php:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ["8.1", "8.4"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          coverage: none
+          tools: composer:v2
+      - run: composer install --no-interaction --prefer-dist
+      - run: find . -path ./vendor -prune -o -name '*.php' -print0 | xargs -0 -n1 php -l
+      - run: composer test
+      - run: composer phpstan
+      - run: composer phpcs
+
+  javascript:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm audit --omit=dev
+      - run: npm run lint:js
+      - run: npm run build
+
+  localization:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update && sudo apt-get install --yes gettext
+      - name: Validate Arabic catalog completeness
+        run: |
+          xgettext --language=PHP --from-code=UTF-8 --keyword=__:1 --keyword=esc_html__:1 --keyword=esc_attr__:1 --output=/tmp/skypay.pot skypay-woocommerce.php includes/*.php
+          msgfmt --check --output-file=/tmp/skypay-ar.mo languages/skypay-woocommerce-ar.po
+          msgcmp languages/skypay-woocommerce-ar.po /tmp/skypay.pot
+
+  compatibility:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: minimum
+            wordpress: WordPress/WordPress#6.4
+            woocommerce: https://downloads.wordpress.org/plugin/woocommerce.9.0.0.zip
+          - name: current
+            wordpress: ""
+            woocommerce: https://downloads.wordpress.org/plugin/woocommerce.latest-stable.zip
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Configure compatibility environment
+        env:
+          WP_CORE: ${{ matrix.wordpress }}
+          WC_ZIP: ${{ matrix.woocommerce }}
+        run: |
+          python3 - <<'PY'
+          import json, os
+          config = {"plugins": [".", os.environ["WC_ZIP"]], "config": {"WP_DEBUG": True}, "testsEnvironment": False}
+          if os.environ["WP_CORE"]:
+              config["core"] = os.environ["WP_CORE"]
+          with open(".wp-env.override.json", "w", encoding="utf-8") as handle:
+              json.dump(config, handle)
+          PY
+      - run: npx wp-env start
+      - run: npx wp-env run cli wp eval-file wp-content/plugins/skypay-woocommerce/bin/wp-env-smoke.php
+      - if: always()
+        run: npx wp-env stop
+
+  package:
+    runs-on: ubuntu-latest
+    needs: [php, javascript, localization, compatibility]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: python3 bin/build-zip.py
+      - run: python3 bin/validate-zip.py dist/skypay-woocommerce.zip
+      - run: cd dist && sha256sum --check skypay-woocommerce.zip.sha256
+      - uses: actions/upload-artifact@v4
+        with:
+          name: skypay-woocommerce
+          path: |
+            dist/skypay-woocommerce.zip
+            dist/skypay-woocommerce.zip.sha256
