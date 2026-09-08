@@ -15,8 +15,8 @@ jobs:
       matrix:
         php: ["8.1", "8.4"]
     steps:
-      - uses: actions/checkout@v4
-      - uses: shivammathur/setup-php@v2
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2
         with:
           php-version: ${{ matrix.php }}
           coverage: none
@@ -30,8 +30,8 @@ jobs:
   javascript:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 20
           cache: npm
@@ -43,7 +43,7 @@ jobs:
   localization:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - run: sudo apt-get update && sudo apt-get install --yes gettext
       - name: Validate Arabic catalog completeness
         run: |
@@ -64,8 +64,8 @@ jobs:
             wordpress: ""
             woocommerce: https://downloads.wordpress.org/plugin/woocommerce.latest-stable.zip
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 20
           cache: npm
@@ -77,13 +77,16 @@ jobs:
         run: |
           python3 - <<'PY'
           import json, os
-          config = {"plugins": [".", os.environ["WC_ZIP"]], "config": {"WP_DEBUG": True}, "testsEnvironment": False}
+          config = {"plugins": ["."], "config": {"WP_DEBUG": True}, "testsEnvironment": False}
           if os.environ["WP_CORE"]:
               config["core"] = os.environ["WP_CORE"]
           with open(".wp-env.override.json", "w", encoding="utf-8") as handle:
               json.dump(config, handle)
           PY
       - run: npx wp-env start
+      - run: npx wp-env run cli wp plugin install "$WC_ZIP" --activate
+        env:
+          WC_ZIP: ${{ matrix.woocommerce }}
       - run: npx wp-env run cli wp eval-file wp-content/plugins/skypay-woocommerce/bin/wp-env-smoke.php
       - if: always()
         run: npx wp-env stop
@@ -92,8 +95,8 @@ jobs:
     runs-on: ubuntu-latest
     needs: [php, javascript, localization, compatibility]
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 20
           cache: npm
@@ -102,7 +105,7 @@ jobs:
       - run: python3 bin/build-zip.py
       - run: python3 bin/validate-zip.py dist/skypay-woocommerce.zip
       - run: cd dist && sha256sum --check skypay-woocommerce.zip.sha256
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: skypay-woocommerce
           path: |

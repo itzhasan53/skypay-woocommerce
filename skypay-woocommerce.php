@@ -54,8 +54,6 @@ add_action(
  * Load the gateway after WooCommerce is available.
  */
 function skypay_wc_bootstrap(): void {
-	load_plugin_textdomain( 'skypay-woocommerce', false, dirname( plugin_basename( __FILE__ ) ) . '/languages' );
-
 	if ( ! class_exists( 'WC_Payment_Gateway' ) ) {
 		add_action(
 			'admin_notices',

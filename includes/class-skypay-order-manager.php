@@ -112,12 +112,14 @@ final class SkyPay_WC_Order_Manager {
 		$expected_merchant  = (string) $order->get_meta( '_skypay_merchant_id', true );
 
 		if (
-			! isset( $payment['merchantOrderId'], $payment['status'], $payment['amount'], $payment['currency'] ) ||
+			! isset( $payment['merchantId'], $payment['merchantOrderId'], $payment['status'], $payment['amount'], $payment['currency'] ) ||
+			! is_string( $payment['merchantId'] ) ||
+			'' === $expected_merchant ||
+			! hash_equals( $expected_merchant, $payment['merchantId'] ) ||
 			! is_string( $payment['merchantOrderId'] ) ||
 			! hash_equals( $expected_reference, $payment['merchantOrderId'] ) ||
 			(int) $payment['amount'] !== $expected_amount ||
-			strtoupper( (string) $payment['currency'] ) !== $expected_currency ||
-			( isset( $payment['merchantId'] ) && '' !== $expected_merchant && ! hash_equals( $expected_merchant, (string) $payment['merchantId'] ) )
+			strtoupper( (string) $payment['currency'] ) !== $expected_currency
 		) {
 			$order->add_order_note( __( 'SkyPay confirmation was rejected because the order reference, merchant, amount, or currency did not match.', 'skypay-woocommerce' ) );
 			return false;

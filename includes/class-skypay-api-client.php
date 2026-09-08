@@ -133,10 +133,11 @@ final class SkyPay_WC_API_Client {
 						'status' => $status,
 					)
 				);
-				$message = is_array( $body ) && isset( $body['error'] ) && is_string( $body['error'] )
-					? sanitize_text_field( $body['error'] )
-					: __( 'SkyPay rejected the request.', 'skypay-woocommerce' );
-				return new WP_Error( 'skypay_api_error', $message, array( 'status' => $status ) );
+				return new WP_Error(
+					'skypay_api_error',
+					__( 'SkyPay rejected the request. Check the gateway configuration and try again.', 'skypay-woocommerce' ),
+					array( 'status' => $status )
+				);
 			}
 
 			return isset( $body['data'] ) && is_array( $body['data'] ) ? $body['data'] : array();

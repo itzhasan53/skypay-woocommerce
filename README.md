@@ -14,6 +14,8 @@ Installable WooCommerce gateway for one-time LYD payments through SkyPay-hosted 
 
 Run `npm ci`, `npm run build`, `composer install`, `composer test`, `composer phpstan`, and `composer phpcs`. Then build the distributable with `python3 bin/build-zip.py`.
 
+To start a clean local WordPress environment, run `npm run test:wp-env`. It starts WordPress, installs and activates WooCommerce, then confirms that SkyPay is registered as a payment gateway. Stop it with `npx wp-env stop`.
+
 The generated artifact is `dist/skypay-woocommerce.zip`; its SHA-256 checksum is written beside it.
 
 ## Security model

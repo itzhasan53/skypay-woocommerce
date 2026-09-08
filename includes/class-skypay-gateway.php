@@ -287,6 +287,8 @@ final class SkyPay_WC_Gateway extends WC_Payment_Gateway {
 			empty( $result['checkoutUrl'] ) ||
 			! is_string( $result['checkoutUrl'] ) ||
 			! $this->checkout_url_is_allowed( $result['checkoutUrl'] ) ||
+			empty( $result['merchantId'] ) ||
+			! is_string( $result['merchantId'] ) ||
 			(string) ( $result['merchantOrderId'] ?? '' ) !== $reference ||
 			(int) ( $result['amount'] ?? -1 ) !== $amount_fils ||
 			'LYD' !== strtoupper( (string) ( $result['currency'] ?? '' ) ) ||
@@ -295,8 +297,15 @@ final class SkyPay_WC_Gateway extends WC_Payment_Gateway {
 			wc_add_notice( __( 'SkyPay returned an invalid checkout response.', 'skypay-woocommerce' ), 'error' );
 			return null;
 		}
+		$merchant_id          = sanitize_text_field( $result['merchantId'] );
+		$existing_merchant_id = (string) $order->get_meta( '_skypay_merchant_id', true );
+		if ( '' !== $existing_merchant_id && ! hash_equals( $existing_merchant_id, $merchant_id ) ) {
+			wc_add_notice( __( 'SkyPay returned a checkout for a different merchant. Please contact the store administrator.', 'skypay-woocommerce' ), 'error' );
+			return null;
+		}
 
 		$order->update_meta_data( '_skypay_checkout_id', sanitize_text_field( (string) ( $result['id'] ?? '' ) ) );
+		$order->update_meta_data( '_skypay_merchant_id', $merchant_id );
 		$order->update_meta_data( '_skypay_checkout_url', esc_url_raw( $result['checkoutUrl'] ) );
 		$order->update_status( 'pending', __( 'SkyPay hosted checkout created. Awaiting signed or server-verified confirmation.', 'skypay-woocommerce' ) );
 		$order->save();

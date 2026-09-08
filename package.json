@@ -5,6 +5,7 @@
   "scripts": {
     "build": "wp-scripts build",
     "lint:js": "ESLINT_USE_FLAT_CONFIG=false wp-scripts lint-js assets/src",
+    "test:wp-env": "wp-env start && wp-env run cli wp plugin install https://downloads.wordpress.org/plugin/woocommerce.latest-stable.zip --activate && wp-env run cli wp eval-file wp-content/plugins/skypay-woocommerce/bin/wp-env-smoke.php",
     "packages-update": "wp-scripts packages-update"
   },
   "devDependencies": {
