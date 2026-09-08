@@ -3,7 +3,7 @@
  * Plugin Name: SkyPay for WooCommerce
  * Plugin URI: https://github.com/itzhasan53/skypay-woocommerce
  * Description: Accept one-time LYD payments through SkyPay-hosted checkout.
- * Version: 0.1.0-beta.1
+ * Version: 0.1.0-beta.2
  * Requires at least: 6.4
  * Requires PHP: 8.1
  * WC requires at least: 9.0
@@ -20,7 +20,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'SKYPAY_WC_VERSION', '0.1.0-beta.1' );
+define( 'SKYPAY_WC_VERSION', '0.1.0-beta.2' );
 define( 'SKYPAY_WC_FILE', __FILE__ );
 define( 'SKYPAY_WC_PATH', plugin_dir_path( __FILE__ ) );
 define( 'SKYPAY_WC_URL', plugin_dir_url( __FILE__ ) );

@@ -1,6 +1,6 @@
 msgid ""
 msgstr ""
-"Project-Id-Version: SkyPay for WooCommerce 0.1.0-beta.1\n"
+"Project-Id-Version: SkyPay for WooCommerce 0.1.0-beta.2\n"
 "PO-Revision-Date: 2026-09-05 00:00+0200\n"
 "Last-Translator: SkyPay\n"
 "Language-Team: Arabic\n"
@@ -30,6 +30,9 @@ msgstr "تعذر على سكاي باي تأمين عودة عملية الدف�
 
 msgid "SkyPay rejected the request."
 msgstr "رفضت سكاي باي الطلب."
+
+msgid "SkyPay rejected the request. Check the gateway configuration and try again."
+msgstr "رفضت سكاي باي الطلب. راجع إعدادات البوابة وحاول مرة أخرى."
 
 msgid "SkyPay request failed."
 msgstr "فشل طلب سكاي باي."
@@ -150,6 +153,9 @@ msgstr "طلب WooCommerce رقم %s"
 
 msgid "SkyPay returned an invalid checkout response."
 msgstr "أعادت سكاي باي استجابة دفع غير صالحة."
+
+msgid "SkyPay returned a checkout for a different merchant. Please contact the store administrator."
+msgstr "أعادت سكاي باي صفحة دفع تخص تاجراً آخر. يرجى التواصل مع مدير المتجر."
 
 msgid "SkyPay hosted checkout created. Awaiting signed or server-verified confirmation."
 msgstr "تم إنشاء صفحة دفع سكاي باي المستضافة. بانتظار تأكيد موقع أو متحقق منه عبر الخادم."
