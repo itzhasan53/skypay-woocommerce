@@ -21,5 +21,3 @@ The generated artifact is `dist/skypay-woocommerce.zip`; its SHA-256 checksum is
 ## Security model
 
 API keys and webhook secrets are encrypted with authenticated encryption derived from WordPress salts. Payment state is never trusted from a browser redirect. Only a correctly signed webhook or an authenticated server-to-server lookup can complete an order.
-
-Do not commit real SkyPay credentials or customer data to this repository.
