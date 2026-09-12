@@ -13,7 +13,7 @@ final class SkyPay_WC_Order_Manager {
 	private const DELAYS      = array( 60, 300, 900, 1800, 3600 );
 
 	public static function init(): void {
-		add_action( self::ACTION_HOOK, array( self::class, 'run_reconciliation' ) );
+		add_action( self::ACTION_HOOK, array( self::class, 'run_reconciliation' ), 10, 2 );
 		add_action( 'woocommerce_api_skypay_return', array( self::class, 'handle_return' ) );
 	}
 
@@ -34,43 +34,75 @@ final class SkyPay_WC_Order_Manager {
 		return substr( hash_hmac( 'sha256', $site, wp_salt( 'nonce' ) ), 0, 16 );
 	}
 
-	public static function schedule( int $order_id, int $attempt = 0 ): void {
-		if ( $attempt >= count( self::DELAYS ) ) {
-			return;
-		}
-
-		$timestamp = time() + self::DELAYS[ $attempt ];
-		if ( function_exists( 'as_has_scheduled_action' ) && function_exists( 'as_schedule_single_action' ) ) {
-			if ( ! as_has_scheduled_action( self::ACTION_HOOK, array( $order_id ), self::GROUP ) ) {
-				as_schedule_single_action( $timestamp, self::ACTION_HOOK, array( $order_id ), self::GROUP, true );
+	public static function schedule( int $order_id, int $attempt = 0, ?WC_Order $order = null ): bool {
+		if ( $attempt < 0 || $attempt >= count( self::DELAYS ) ) {
+			if ( $order instanceof WC_Order ) {
+				self::note_once( $order, '_skypay_reconciliation_exhausted', __( 'SkyPay automatic confirmation attempts are exhausted. Verify the payment in SkyPay before changing this order.', 'skypay-woocommerce' ) );
 			}
-			return;
+			return false;
 		}
 
-		if ( ! wp_next_scheduled( self::ACTION_HOOK, array( $order_id ) ) ) {
-			wp_schedule_single_event( $timestamp, self::ACTION_HOOK, array( $order_id ) );
+		$args      = array( $order_id, $attempt );
+		$timestamp = time() + self::DELAYS[ $attempt ];
+		if ( function_exists( 'as_get_scheduled_actions' ) && function_exists( 'as_schedule_single_action' ) ) {
+			// Only pending jobs suppress enqueueing. A running job may need to retry lock contention.
+			$pending = as_get_scheduled_actions( array( 'hook' => self::ACTION_HOOK, 'args' => $args, 'group' => self::GROUP, 'status' => 'pending', 'per_page' => 1 ), 'ids' );
+			$queued  = ! empty( $pending ) || 0 < as_schedule_single_action( $timestamp, self::ACTION_HOOK, $args, self::GROUP, false );
+		} else {
+			$queued = (bool) wp_next_scheduled( self::ACTION_HOOK, $args ) || true === wp_schedule_single_event( $timestamp, self::ACTION_HOOK, $args, true );
+		}
+		if ( ! $queued ) {
+			if ( $order instanceof WC_Order ) {
+				self::note_once( $order, '_skypay_reconciliation_enqueue_failed', __( 'SkyPay could not schedule payment confirmation. Check scheduled actions and verify this payment manually.', 'skypay-woocommerce' ) );
+			}
+			wc_get_logger()->error( 'SkyPay reconciliation enqueue failed.', array( 'source' => self::GROUP, 'order_id' => $order_id, 'attempt' => $attempt ) );
+		}
+		return $queued;
+	}
+
+	private static function note_once( WC_Order $order, string $key, string $message ): void {
+		if ( ! $order->get_meta( $key, true ) ) {
+			$order->update_meta_data( $key, 'yes' );
+			$order->save();
+			$order->add_order_note( $message );
 		}
 	}
 
-	public static function run_reconciliation( int $order_id ): void {
-		$order = wc_get_order( $order_id );
-		if ( ! $order instanceof WC_Order || $order->is_paid() ) {
+	public static function is_protected( WC_Order $order ): bool {
+		return $order->is_paid() || $order->has_status( 'refunded' ) || null !== $order->get_date_paid() || 'yes' === $order->get_meta( '_skypay_payment_completed', true );
+	}
+
+	public static function run_reconciliation( int $order_id, ?int $attempt = null ): void {
+		$lock = SkyPay_WC_Order_Lock::acquire( $order_id );
+		if ( null === $lock ) {
+			self::schedule( $order_id, $attempt ?? 0 );
 			return;
 		}
-
-		$attempt = (int) $order->get_meta( '_skypay_reconciliation_attempt', true );
-		$order->update_meta_data( '_skypay_reconciliation_attempt', (string) ( $attempt + 1 ) );
-		$order->save();
-
-		$result = self::fetch_authoritative_status( $order );
-		if ( is_wp_error( $result ) ) {
-			self::schedule( $order_id, $attempt + 1 );
-			return;
-		}
-
-		$resolved = self::apply_authoritative_status( $order, $result, 'api' );
-		if ( ! $resolved ) {
-			self::schedule( $order_id, $attempt + 1 );
+		try {
+			$order = $lock->load_order( $order_id );
+			if ( ! $order instanceof WC_Order || self::is_protected( $order ) ) {
+				return;
+			}
+			$next_attempt = (int) $order->get_meta( '_skypay_reconciliation_attempt', true );
+			// Existing one-argument jobs continue from persisted progress.
+			$attempt = $attempt ?? $next_attempt;
+			if ( $attempt < $next_attempt || $attempt < 0 ) {
+				return;
+			}
+			if ( $attempt >= count( self::DELAYS ) ) {
+				self::schedule( $order_id, $attempt, $order );
+				return;
+			}
+			$result = self::fetch_authoritative_status( $order );
+			$lock->assert_owned();
+			$order->update_meta_data( '_skypay_reconciliation_attempt', (string) ( $attempt + 1 ) );
+			$order->save();
+			$resolved = ! is_wp_error( $result ) && self::apply_authoritative_status( $order, $result, 'api' );
+			if ( ! $resolved ) {
+				self::schedule( $order_id, $attempt + 1, $order );
+			}
+		} finally {
+			$lock->release();
 		}
 	}
 
@@ -95,7 +127,34 @@ final class SkyPay_WC_Order_Manager {
 		if ( is_wp_error( $client ) ) {
 			return $client;
 		}
-		return $client->get_payment_by_order( $reference );
+		$result = $client->get_payment_by_order( $reference );
+		// Legacy bindings are learned only from this authenticated, order-scoped API read.
+		// The caller persists this metadata only after validating lock ownership and the full response.
+		if ( ! is_wp_error( $result ) && '' === (string) $order->get_meta( '_skypay_merchant_id', true ) && self::matches_payment( $order, $result, false ) ) {
+			$order->update_meta_data( '_skypay_merchant_id', $result['merchantId'] );
+		}
+		return $result;
+	}
+
+	/**
+	 * Validate the immutable payment identity.
+	 *
+	 * @param WC_Order             $order Order under the mutex.
+	 * @param array<string, mixed> $payment API or signed webhook payload.
+	 * @param bool                 $require_merchant Whether an existing binding is required.
+	 */
+	private static function matches_payment( WC_Order $order, array $payment, bool $require_merchant = true ): bool {
+		$reference = (string) $order->get_meta( '_skypay_merchant_order_id', true );
+		$merchant  = (string) $order->get_meta( '_skypay_merchant_id', true );
+		$amount    = (int) $order->get_meta( '_skypay_amount_fils', true );
+		return isset( $payment['merchantId'], $payment['merchantOrderId'], $payment['status'], $payment['amount'], $payment['currency'] )
+			&& is_string( $payment['merchantId'] ) && '' !== $payment['merchantId']
+			&& ( ! $require_merchant || ( '' !== $merchant && hash_equals( $merchant, $payment['merchantId'] ) ) )
+			&& is_string( $payment['merchantOrderId'] ) && '' !== $reference && hash_equals( $reference, $payment['merchantOrderId'] )
+			&& is_int( $payment['amount'] ) && $amount > 0 && $payment['amount'] === $amount
+			&& is_string( $payment['currency'] ) && strtoupper( $payment['currency'] ) === strtoupper( (string) $order->get_currency() )
+			&& is_string( $payment['status'] )
+			&& ( ! isset( $payment['mode'] ) || $payment['mode'] === $order->get_meta( '_skypay_mode', true ) );
 	}
 
 	/**
@@ -106,49 +165,55 @@ final class SkyPay_WC_Order_Manager {
 	 * @param string               $source Trusted confirmation source label.
 	 */
 	public static function apply_authoritative_status( WC_Order $order, array $payment, string $source ): bool {
-		$expected_reference = (string) $order->get_meta( '_skypay_merchant_order_id', true );
-		$expected_amount    = (int) $order->get_meta( '_skypay_amount_fils', true );
-		$expected_currency  = strtoupper( (string) $order->get_currency() );
-		$expected_merchant  = (string) $order->get_meta( '_skypay_merchant_id', true );
-
-		if (
-			! isset( $payment['merchantId'], $payment['merchantOrderId'], $payment['status'], $payment['amount'], $payment['currency'] ) ||
-			! is_string( $payment['merchantId'] ) ||
-			'' === $expected_merchant ||
-			! hash_equals( $expected_merchant, $payment['merchantId'] ) ||
-			! is_string( $payment['merchantOrderId'] ) ||
-			! hash_equals( $expected_reference, $payment['merchantOrderId'] ) ||
-			(int) $payment['amount'] !== $expected_amount ||
-			strtoupper( (string) $payment['currency'] ) !== $expected_currency
-		) {
+		if ( ! self::matches_payment( $order, $payment ) ) {
 			$order->add_order_note( __( 'SkyPay confirmation was rejected because the order reference, merchant, amount, or currency did not match.', 'skypay-woocommerce' ) );
 			return false;
 		}
+		if ( self::is_protected( $order ) ) {
+			return true;
+		}
+		$order->save();
 
 		$status     = strtoupper( (string) $payment['status'] );
 		$payment_id = isset( $payment['paymentId'] ) ? sanitize_text_field( (string) $payment['paymentId'] ) : '';
 		switch ( $status ) {
 			case 'COMPLETED':
 				if ( ! $order->is_paid() ) {
-					$order->payment_complete( $payment_id );
+					if ( ! $order->payment_complete( $payment_id ) ) {
+						return false;
+					}
+					// payment_complete() returns only after saving, but refresh before
+					// recording the SkyPay marker so a failing store extension cannot
+					// strand an unpaid order behind an irreversible local marker.
+					$order->get_data_store()->read( $order );
+					$order->read_meta_data( true );
+					if ( ! $order->is_paid() || null === $order->get_date_paid() ) {
+						return false;
+					}
+					$order->update_meta_data( '_skypay_payment_completed', 'yes' );
+					$order->save();
 					/* translators: %s: trusted payment confirmation source. */
 					$order->add_order_note( sprintf( __( 'SkyPay payment confirmed by %s.', 'skypay-woocommerce' ), $source ) );
 				}
 				return true;
 			case 'FAILED':
+				if ( $order->has_status( 'cancelled' ) ) {
+					return true;
+				}
 				if ( ! $order->has_status( 'failed' ) ) {
 					$order->update_status( 'failed', __( 'SkyPay reported that the payment failed.', 'skypay-woocommerce' ) );
 				}
 				return true;
 			case 'REQUIRES_REVIEW':
+				if ( $order->has_status( array( 'failed', 'cancelled' ) ) ) {
+					return true;
+				}
 				if ( ! $order->has_status( 'on-hold' ) ) {
 					$order->update_status( 'on-hold', __( 'SkyPay requires a manual payment review.', 'skypay-woocommerce' ) );
 				}
 				return true;
 			default:
-				if ( ! $order->has_status( 'pending' ) ) {
-					$order->update_status( 'pending', __( 'SkyPay payment is awaiting authoritative confirmation.', 'skypay-woocommerce' ) );
-				}
+				// Pending and unknown statuses never undo a review, failure, cancellation or payment.
 				return false;
 		}
 	}
@@ -158,36 +223,44 @@ final class SkyPay_WC_Order_Manager {
 		$order_id = isset( $_GET['order_id'] ) ? absint( wp_unslash( $_GET['order_id'] ) ) : 0;
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- The opaque state token is verified below.
 		$token = isset( $_GET['state'] ) ? sanitize_text_field( wp_unslash( $_GET['state'] ) ) : '';
-		$order = wc_get_order( $order_id );
-
-		if ( ! $order instanceof WC_Order || '' === $token ) {
-			wp_safe_redirect( wc_get_checkout_url() );
-			exit;
-		}
-
-		$stored_hash = (string) $order->get_meta( '_skypay_return_token_hash', true );
-		if ( '' === $stored_hash || ! hash_equals( $stored_hash, hash( 'sha256', $token ) ) ) {
-			$order->add_order_note( __( 'A SkyPay return request with an invalid token was rejected.', 'skypay-woocommerce' ) );
-			wp_safe_redirect( wc_get_checkout_url() );
-			exit;
-		}
-
-		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- The opaque state token was verified above.
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- The opaque state token is verified under the order mutex.
 		$is_cancelled = isset( $_GET['cancelled'] ) && '1' === sanitize_text_field( wp_unslash( $_GET['cancelled'] ) );
-		if ( $is_cancelled ) {
-			$order->add_order_note( __( 'The customer returned from SkyPay using the cancellation path. Payment confirmation is still pending.', 'skypay-woocommerce' ) );
-		}
-
-		$result = self::fetch_authoritative_status( $order );
-		if ( ! is_wp_error( $result ) ) {
-			self::apply_authoritative_status( $order, $result, 'api return verification' );
-		}
-		if ( ! $order->is_paid() ) {
-			self::schedule( $order_id );
-		}
-
-		wp_safe_redirect( $is_cancelled && ! $order->is_paid() ? $order->get_checkout_payment_url() : $order->get_checkout_order_received_url() );
+		wp_safe_redirect( self::verify_return( $order_id, $token, $is_cancelled ) );
 		exit;
+	}
+
+	public static function verify_return( int $order_id, string $token, bool $is_cancelled = false ): string {
+		$lock = SkyPay_WC_Order_Lock::acquire( $order_id );
+		if ( null === $lock ) {
+			return wc_get_checkout_url();
+		}
+		try {
+			$order = $lock->load_order( $order_id );
+			if ( ! $order instanceof WC_Order || '' === $token ) {
+				return wc_get_checkout_url();
+			}
+			$stored_hash = (string) $order->get_meta( '_skypay_return_token_hash', true );
+			if ( '' === $stored_hash || ! hash_equals( $stored_hash, hash( 'sha256', $token ) ) ) {
+				return wc_get_checkout_url();
+			}
+			if ( ! self::is_protected( $order ) ) {
+				if ( $is_cancelled ) {
+					self::note_once( $order, '_skypay_cancel_return_seen', __( 'The customer returned from SkyPay using the cancellation path. Payment confirmation is still pending.', 'skypay-woocommerce' ) );
+				}
+				$result = self::fetch_authoritative_status( $order );
+				$lock->assert_owned();
+				// Persist a legacy merchant binding learned from an authenticated
+				// API response even when the provider is still pending.
+				$order->save();
+				$resolved = ! is_wp_error( $result ) && self::apply_authoritative_status( $order, $result, 'api return verification' );
+				if ( ! $resolved ) {
+					self::schedule( $order_id, (int) $order->get_meta( '_skypay_reconciliation_attempt', true ), $order );
+				}
+			}
+			return $is_cancelled && ! self::is_protected( $order ) ? $order->get_checkout_payment_url() : $order->get_checkout_order_received_url();
+		} finally {
+			$lock->release();
+		}
 	}
 
 	private static function gateway(): ?WC_Payment_Gateway {

@@ -181,13 +181,37 @@ final class SkyPay_WC_Gateway extends WC_Payment_Gateway {
 	 * @return array{result: string, redirect: string}|null
 	 */
 	public function process_payment( $order_id ): ?array {
-		$order = wc_get_order( $order_id );
+		$lock = SkyPay_WC_Order_Lock::acquire( (int) $order_id );
+		if ( null === $lock ) {
+			wc_add_notice( __( 'SkyPay is already updating this order. Please try again shortly.', 'skypay-woocommerce' ), 'error' );
+			return null;
+		}
+		try {
+			return $this->process_locked_payment( (int) $order_id, $lock );
+		} finally {
+			$lock->release();
+		}
+	}
+
+	/**
+	 * Create a checkout while holding the order mutex.
+	 *
+	 * @param int                  $order_id Order ID.
+	 * @param SkyPay_WC_Order_Lock $lock Owned mutex.
+	 * @return array{result: string, redirect: string}|null
+	 */
+	private function process_locked_payment( int $order_id, SkyPay_WC_Order_Lock $lock ): ?array {
+		$order = $lock->load_order( $order_id );
 		if ( ! $order instanceof WC_Order ) {
 			wc_add_notice( __( 'The WooCommerce order could not be loaded.', 'skypay-woocommerce' ), 'error' );
 			return null;
 		}
 		if ( 'LYD' !== strtoupper( (string) $order->get_currency() ) ) {
 			wc_add_notice( __( 'SkyPay supports LYD orders only.', 'skypay-woocommerce' ), 'error' );
+			return null;
+		}
+		if ( SkyPay_WC_Order_Manager::is_protected( $order ) || $order->has_status( 'cancelled' ) ) {
+			wc_add_notice( __( 'This order cannot start another SkyPay payment.', 'skypay-woocommerce' ), 'error' );
 			return null;
 		}
 
@@ -202,6 +226,10 @@ final class SkyPay_WC_Gateway extends WC_Payment_Gateway {
 		$existing_url    = (string) $order->get_meta( '_skypay_checkout_url', true );
 		$existing_mode   = (string) $order->get_meta( '_skypay_mode', true );
 		$existing_amount = (int) $order->get_meta( '_skypay_amount_fils', true );
+		if ( '' !== (string) $order->get_meta( '_skypay_merchant_order_id', true ) && ( $existing_mode !== $mode || $existing_amount !== $amount_fils ) ) {
+			wc_add_notice( __( 'The existing SkyPay checkout no longer matches this order. Please contact the store administrator.', 'skypay-woocommerce' ), 'error' );
+			return null;
+		}
 		if ( '' !== $existing_url ) {
 			if (
 				! $order->is_paid() &&
@@ -237,15 +265,6 @@ final class SkyPay_WC_Gateway extends WC_Payment_Gateway {
 				return null;
 			}
 		}
-		$order->update_meta_data( '_skypay_return_token_hash', hash( 'sha256', $return_token ) );
-		$order->update_meta_data( '_skypay_amount_fils', (string) $amount_fils );
-		$order->update_meta_data( '_skypay_mode', $mode );
-		$connected_merchant_id = sanitize_text_field( (string) $this->get_option( 'connected_merchant_id', '' ) );
-		if ( '' !== $connected_merchant_id ) {
-			$order->update_meta_data( '_skypay_merchant_id', $connected_merchant_id );
-		}
-		$order->save();
-
 		$return_base = WC()->api_request_url( 'skypay_return' );
 		$success_url = add_query_arg(
 			array(
@@ -262,23 +281,48 @@ final class SkyPay_WC_Gateway extends WC_Payment_Gateway {
 			),
 			$return_base
 		);
-		$payload     = array(
-			'amount'          => $amount_fils,
-			'currency'        => 'LYD',
-			'merchantOrderId' => $reference,
-			/* translators: %s: WooCommerce order number. */
-			'title'           => sprintf( __( 'WooCommerce order #%s', 'skypay-woocommerce' ), $order->get_order_number() ),
-			'successUrl'      => $success_url,
-			'cancelUrl'       => $cancel_url,
-			'metadata'        => array(
-				'integration'        => 'woocommerce',
-				'integrationVersion' => SKYPAY_WC_VERSION,
-				'siteFingerprint'    => SkyPay_WC_Order_Manager::site_fingerprint(),
-				'orderReference'     => $reference,
-			),
-		);
+		$payload     = $this->stored_checkout_payload( $order, $reference, $amount_fils, $return_token );
+		if ( null === $payload ) {
+			$payload = array(
+				'amount'          => $amount_fils,
+				'currency'        => 'LYD',
+				'merchantOrderId' => $reference,
+				/* translators: %s: WooCommerce order number. */
+				'title'           => sprintf( __( 'WooCommerce order #%s', 'skypay-woocommerce' ), $order->get_order_number() ),
+				'successUrl'      => $success_url,
+				'cancelUrl'       => $cancel_url,
+				'metadata'        => array(
+					'integration'        => 'woocommerce',
+					'integrationVersion' => SKYPAY_WC_VERSION,
+					'siteFingerprint'    => SkyPay_WC_Order_Manager::site_fingerprint(),
+					'orderReference'     => $reference,
+				),
+			);
+			try {
+				$encoded_payload = wp_json_encode( $payload );
+				if ( ! is_string( $encoded_payload ) ) {
+					throw new RuntimeException( 'SkyPay checkout payload could not be encoded.' );
+				}
+				$order->update_meta_data( '_skypay_create_payload', SkyPay_WC_Crypto::encrypt( $encoded_payload ) );
+			} catch ( Throwable $error ) {
+				wc_add_notice( __( 'SkyPay could not secure the checkout request. Please try again.', 'skypay-woocommerce' ), 'error' );
+				return null;
+			}
+		}
+
+		$order->update_meta_data( '_skypay_return_token_hash', hash( 'sha256', $return_token ) );
+		$order->update_meta_data( '_skypay_amount_fils', (string) $amount_fils );
+		$order->update_meta_data( '_skypay_mode', $mode );
+		$connected_merchant_id = sanitize_text_field( (string) $this->get_option( 'connected_merchant_id', '' ) );
+		if ( '' !== $connected_merchant_id && '' === (string) $order->get_meta( '_skypay_merchant_id', true ) ) {
+			$order->update_meta_data( '_skypay_merchant_id', $connected_merchant_id );
+		}
+		$order->save();
+		// Persist and reconcile the stable reference even if creation times out after SkyPay accepts it.
+		SkyPay_WC_Order_Manager::schedule( $order->get_id(), (int) $order->get_meta( '_skypay_reconciliation_attempt', true ), $order );
 
 		$result = $this->client()->create_payment( $payload, $idempotency_key );
+		$lock->assert_owned();
 		if ( is_wp_error( $result ) ) {
 			wc_add_notice( esc_html( $result->get_error_message() ), 'error' );
 			return null;
@@ -307,14 +351,51 @@ final class SkyPay_WC_Gateway extends WC_Payment_Gateway {
 		$order->update_meta_data( '_skypay_checkout_id', sanitize_text_field( (string) ( $result['id'] ?? '' ) ) );
 		$order->update_meta_data( '_skypay_merchant_id', $merchant_id );
 		$order->update_meta_data( '_skypay_checkout_url', esc_url_raw( $result['checkoutUrl'] ) );
-		$order->update_status( 'pending', __( 'SkyPay hosted checkout created. Awaiting signed or server-verified confirmation.', 'skypay-woocommerce' ) );
+		$order->delete_meta_data( '_skypay_create_payload' );
+		$confirmation              = $result;
+		$confirmation['status']    = $result['status'] ?? 'PENDING';
+		$confirmation['paymentId'] = $result['paymentId'] ?? ( $result['id'] ?? '' );
+		SkyPay_WC_Order_Manager::apply_authoritative_status( $order, $confirmation, 'checkout creation' );
 		$order->save();
-		SkyPay_WC_Order_Manager::schedule( $order->get_id() );
 
 		return array(
 			'result'   => 'success',
 			'redirect' => esc_url_raw( $result['checkoutUrl'] ),
 		);
+	}
+
+	/**
+	 * Reuse the exact encrypted request when a transport failure leaves a payment
+	 * accepted by SkyPay but without a response at the store.
+	 *
+	 * @return array<string, mixed>|null
+	 */
+	private function stored_checkout_payload( WC_Order $order, string $reference, int $amount_fils, string $return_token ): ?array {
+		$stored = SkyPay_WC_Crypto::decrypt( (string) $order->get_meta( '_skypay_create_payload', true ) );
+		if ( '' === $stored ) {
+			return null;
+		}
+		$payload = json_decode( $stored, true );
+		if ( ! is_array( $payload ) || ! isset( $payload['metadata'] ) || ! is_array( $payload['metadata'] ) ) {
+			return null;
+		}
+		$metadata = $payload['metadata'];
+		if (
+			! isset( $payload['amount'], $payload['currency'], $payload['merchantOrderId'], $payload['successUrl'], $payload['cancelUrl'] ) ||
+			! is_int( $payload['amount'] ) || $payload['amount'] !== $amount_fils ||
+			! is_string( $payload['currency'] ) || 'LYD' !== strtoupper( $payload['currency'] ) ||
+			! is_string( $payload['merchantOrderId'] ) || ! hash_equals( $reference, $payload['merchantOrderId'] ) ||
+			! is_string( $payload['successUrl'] ) || ! is_string( $payload['cancelUrl'] ) ||
+			! wp_http_validate_url( $payload['successUrl'] ) || ! wp_http_validate_url( $payload['cancelUrl'] ) ||
+			! isset( $metadata['integration'], $metadata['orderReference'] ) ||
+			! is_string( $metadata['integration'] ) || ! hash_equals( 'woocommerce', $metadata['integration'] ) ||
+			! is_string( $metadata['orderReference'] ) || ! hash_equals( $reference, $metadata['orderReference'] ) ||
+			! str_contains( $payload['successUrl'], rawurlencode( $return_token ) ) ||
+			! str_contains( $payload['cancelUrl'], rawurlencode( $return_token ) )
+		) {
+			return null;
+		}
+		return $payload;
 	}
 
 	public function client_for_order( WC_Order $order ): SkyPay_WC_API_Client|WP_Error {

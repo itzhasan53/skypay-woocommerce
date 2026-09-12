@@ -6,7 +6,7 @@ Tested up to: 6.8
 Requires PHP: 8.1
 WC requires at least: 9.0
 WC tested up to: 10.0
-Stable tag: 0.1.0-beta.2
+Stable tag: 0.1.0-beta.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -73,6 +73,12 @@ Use of the service is subject to SkyPay merchant terms and privacy documentation
 See `privacy.md` included with the plugin.
 
 == Changelog ==
+
+= 0.1.0-beta.3 =
+
+* Added per-order locking for checkout creation, signed webhook handling, return verification, and reconciliation.
+* Added HPOS-safe reliability checks for duplicate webhooks and protected paid orders.
+* Hardened reconciliation scheduling and dependency checks.
 
 = 0.1.0-beta.2 =
 

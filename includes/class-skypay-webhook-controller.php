@@ -8,9 +8,6 @@
 defined( 'ABSPATH' ) || exit;
 
 final class SkyPay_WC_Webhook_Controller {
-	private const DELIVERY_LOCK_PREFIX = '_skypay_wc_delivery_lock_';
-	private const DELIVERY_LOCK_TTL    = 300;
-
 	public static function init(): void {
 		add_action( 'rest_api_init', array( self::class, 'register_routes' ) );
 	}
@@ -65,7 +62,7 @@ final class SkyPay_WC_Webhook_Controller {
 		}
 
 		$payload = json_decode( $raw_body, true );
-		if ( ! is_array( $payload ) || empty( $payload['merchantOrderId'] ) ) {
+		if ( ! is_array( $payload ) || empty( $payload['merchantOrderId'] ) || ! is_string( $payload['merchantOrderId'] ) || 'COMPLETED' !== ( $payload['status'] ?? '' ) ) {
 			return new WP_REST_Response(
 				array(
 					'accepted' => false,
@@ -86,29 +83,8 @@ final class SkyPay_WC_Webhook_Controller {
 			);
 		}
 
-		if ( self::delivery_was_processed( $order, $delivery ) ) {
-			return new WP_REST_Response(
-				array(
-					'accepted'  => true,
-					'duplicate' => true,
-				),
-				200
-			);
-		}
-
-		$lock = self::acquire_delivery_lock( $delivery );
+		$lock = SkyPay_WC_Order_Lock::acquire( $order->get_id() );
 		if ( null === $lock ) {
-			$fresh_order = wc_get_order( $order->get_id() );
-			if ( $fresh_order instanceof WC_Order && self::delivery_was_processed( $fresh_order, $delivery ) ) {
-				return new WP_REST_Response(
-					array(
-						'accepted'  => true,
-						'duplicate' => true,
-					),
-					200
-				);
-			}
-
 			return new WP_REST_Response(
 				array(
 					'accepted' => false,
@@ -119,6 +95,13 @@ final class SkyPay_WC_Webhook_Controller {
 		}
 
 		try {
+			$order = $lock->load_order( $order->get_id() );
+			if ( ! $order instanceof WC_Order ) {
+				return new WP_REST_Response( array( 'accepted' => false, 'error' => 'order_not_found' ), 404 );
+			}
+			if ( self::delivery_was_processed( $order, $delivery ) ) {
+				return new WP_REST_Response( array( 'accepted' => true, 'duplicate' => true ), 200 );
+			}
 			if ( ! SkyPay_WC_Order_Manager::apply_authoritative_status( $order, $payload, 'signed webhook' ) ) {
 				return new WP_REST_Response(
 					array(
@@ -134,7 +117,7 @@ final class SkyPay_WC_Webhook_Controller {
 			$order->update_meta_data( '_skypay_delivery_ids', array_slice( array_unique( $deliveries ), -50 ) );
 			$order->save();
 		} finally {
-			delete_option( $lock );
+			$lock->release();
 		}
 
 		return new WP_REST_Response( array( 'accepted' => true ), 200 );
@@ -158,16 +141,6 @@ final class SkyPay_WC_Webhook_Controller {
 
 	private static function delivery_was_processed( WC_Order $order, string $delivery ): bool {
 		return in_array( $delivery, self::delivery_ids( $order ), true );
-	}
-
-	private static function acquire_delivery_lock( string $delivery ): ?string {
-		$lock      = self::DELIVERY_LOCK_PREFIX . hash( 'sha256', $delivery );
-		$timestamp = get_option( $lock, '' );
-		if ( '' !== $timestamp && ( ! is_numeric( $timestamp ) || time() - (int) $timestamp > self::DELIVERY_LOCK_TTL ) ) {
-			delete_option( $lock );
-		}
-
-		return add_option( $lock, (string) time(), '', false ) ? $lock : null;
 	}
 
 	private static function find_order( string $merchant_order_id ): ?WC_Order {

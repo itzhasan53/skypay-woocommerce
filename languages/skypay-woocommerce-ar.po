@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
-"Project-Id-Version: SkyPay for WooCommerce 0.1.0-beta.2\n"
-"PO-Revision-Date: 2026-09-05 00:00+0200\n"
+"Project-Id-Version: SkyPay for WooCommerce 0.1.0-beta.3\n"
+"PO-Revision-Date: 2026-09-11 00:00+0200\n"
 "Last-Translator: SkyPay\n"
 "Language-Team: Arabic\n"
 "Language: ar\n"
@@ -54,6 +54,18 @@ msgstr "أفادت سكاي باي بفشل عملية الدفع."
 
 msgid "SkyPay requires a manual payment review."
 msgstr "تتطلب دفعة سكاي باي مراجعة يدوية."
+
+msgid "SkyPay automatic confirmation attempts are exhausted. Verify the payment in SkyPay before changing this order."
+msgstr "استُنفدت محاولات التأكيد التلقائي من سكاي باي. تحقّق من حالة الدفع في سكاي باي قبل تعديل هذا الطلب."
+
+msgid "SkyPay could not schedule payment confirmation. Check scheduled actions and verify this payment manually."
+msgstr "تعذّر جدولة تأكيد الدفع من سكاي باي. راجع الإجراءات المجدولة وتحقّق من هذه الدفعة يدوياً."
+
+msgid "SkyPay is already updating this order. Please try again shortly."
+msgstr "يجري سكاي باي تحديث هذا الطلب الآن. حاول مرة أخرى بعد قليل."
+
+msgid "This order cannot start another SkyPay payment."
+msgstr "لا يمكن بدء عملية دفع جديدة عبر سكاي باي لهذا الطلب."
 
 msgid "SkyPay payment is awaiting authoritative confirmation."
 msgstr "دفعة سكاي باي بانتظار التأكيد الموثوق."

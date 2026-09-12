@@ -22,6 +22,7 @@ jobs:
           coverage: none
           tools: composer:v2
       - run: composer install --no-interaction --prefer-dist
+      - run: composer audit --locked
       - run: find . -path ./vendor -prune -o -name '*.php' -print0 | xargs -0 -n1 php -l
       - run: composer test
       - run: composer phpstan
@@ -36,7 +37,7 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
-      - run: npm audit --omit=dev
+      - run: npm audit --audit-level=high
       - run: npm run lint:js
       - run: npm run build
 
@@ -88,6 +89,7 @@ jobs:
         env:
           WC_ZIP: ${{ matrix.woocommerce }}
       - run: npx wp-env run cli wp eval-file wp-content/plugins/skypay-woocommerce/bin/wp-env-smoke.php
+      - run: npx wp-env run cli wp eval-file wp-content/plugins/skypay-woocommerce/bin/wp-env-reliability.php
       - if: always()
         run: npx wp-env stop
 
