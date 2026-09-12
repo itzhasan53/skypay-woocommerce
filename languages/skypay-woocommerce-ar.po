@@ -28,8 +28,8 @@ msgstr "تعذر الاتصال بسكاي باي. يرجى المحاولة م�
 msgid "SkyPay could not secure the checkout return. Please try again."
 msgstr "تعذر على سكاي باي تأمين عودة عملية الدفع. يرجى المحاولة مرة أخرى."
 
-msgid "SkyPay rejected the request."
-msgstr "رفضت سكاي باي الطلب."
+msgid "SkyPay could not secure the checkout request. Please try again."
+msgstr "تعذّر على سكاي باي تأمين طلب الدفع. حاول مرة أخرى."
 
 msgid "SkyPay rejected the request. Check the gateway configuration and try again."
 msgstr "رفضت سكاي باي الطلب. راجع إعدادات البوابة وحاول مرة أخرى."
@@ -66,12 +66,6 @@ msgstr "يجري سكاي باي تحديث هذا الطلب الآن. حاول
 
 msgid "This order cannot start another SkyPay payment."
 msgstr "لا يمكن بدء عملية دفع جديدة عبر سكاي باي لهذا الطلب."
-
-msgid "SkyPay payment is awaiting authoritative confirmation."
-msgstr "دفعة سكاي باي بانتظار التأكيد الموثوق."
-
-msgid "A SkyPay return request with an invalid token was rejected."
-msgstr "رُفض طلب عودة من سكاي باي بسبب رمز غير صالح."
 
 msgid "The customer returned from SkyPay using the cancellation path. Payment confirmation is still pending."
 msgstr "عاد العميل من سكاي باي عبر مسار الإلغاء. لا يزال تأكيد الدفع معلقاً."
@@ -168,9 +162,6 @@ msgstr "أعادت سكاي باي استجابة دفع غير صالحة."
 
 msgid "SkyPay returned a checkout for a different merchant. Please contact the store administrator."
 msgstr "أعادت سكاي باي صفحة دفع تخص تاجراً آخر. يرجى التواصل مع مدير المتجر."
-
-msgid "SkyPay hosted checkout created. Awaiting signed or server-verified confirmation."
-msgstr "تم إنشاء صفحة دفع سكاي باي المستضافة. بانتظار تأكيد موقع أو متحقق منه عبر الخادم."
 
 msgid "The configured SkyPay mode no longer matches this order."
 msgstr "لم يعد وضع سكاي باي المحدد يطابق هذا الطلب."

@@ -97,10 +97,22 @@ final class SkyPay_WC_Webhook_Controller {
 		try {
 			$order = $lock->load_order( $order->get_id() );
 			if ( ! $order instanceof WC_Order ) {
-				return new WP_REST_Response( array( 'accepted' => false, 'error' => 'order_not_found' ), 404 );
+				return new WP_REST_Response(
+					array(
+						'accepted' => false,
+						'error'    => 'order_not_found',
+					),
+					404
+				);
 			}
 			if ( self::delivery_was_processed( $order, $delivery ) ) {
-				return new WP_REST_Response( array( 'accepted' => true, 'duplicate' => true ), 200 );
+				return new WP_REST_Response(
+					array(
+						'accepted'  => true,
+						'duplicate' => true,
+					),
+					200
+				);
 			}
 			if ( ! SkyPay_WC_Order_Manager::apply_authoritative_status( $order, $payload, 'signed webhook' ) ) {
 				return new WP_REST_Response(

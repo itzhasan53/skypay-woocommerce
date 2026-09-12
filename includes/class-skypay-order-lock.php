@@ -15,7 +15,8 @@ final class SkyPay_WC_Order_Lock {
 	public static function acquire( int $order_id ): ?self {
 		global $wpdb;
 		// Database and table prefix isolate installations and multisite blogs on one server.
-		$name = 'skypay:' . substr( hash( 'sha256', DB_NAME . '|' . $wpdb->prefix . '|' . $order_id ), 0, 56 );
+		$database = defined( 'DB_NAME' ) ? (string) constant( 'DB_NAME' ) : '';
+		$name     = 'skypay:' . substr( hash( 'sha256', $database . '|' . $wpdb->prefix . '|' . $order_id ), 0, 56 );
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- A database mutex must bypass caches and is released on connection loss.
 		$acquired = $wpdb->get_var( $wpdb->prepare( 'SELECT GET_LOCK(%s, 0)', $name ) );
 		if ( '1' !== (string) $acquired ) {

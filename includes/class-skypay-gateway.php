@@ -199,6 +199,7 @@ final class SkyPay_WC_Gateway extends WC_Payment_Gateway {
 	 * @param int                  $order_id Order ID.
 	 * @param SkyPay_WC_Order_Lock $lock Owned mutex.
 	 * @return array{result: string, redirect: string}|null
+	 * @throws RuntimeException When the order mutex is lost.
 	 */
 	private function process_locked_payment( int $order_id, SkyPay_WC_Order_Lock $lock ): ?array {
 		$order = $lock->load_order( $order_id );
@@ -368,6 +369,10 @@ final class SkyPay_WC_Gateway extends WC_Payment_Gateway {
 	 * Reuse the exact encrypted request when a transport failure leaves a payment
 	 * accepted by SkyPay but without a response at the store.
 	 *
+	 * @param WC_Order $order WooCommerce order.
+	 * @param string   $reference Stable merchant order reference.
+	 * @param int      $amount_fils Immutable LYD amount in fils.
+	 * @param string   $return_token Checkout return token.
 	 * @return array<string, mixed>|null
 	 */
 	private function stored_checkout_payload( WC_Order $order, string $reference, int $amount_fils, string $return_token ): ?array {

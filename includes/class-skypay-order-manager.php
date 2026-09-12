@@ -46,7 +46,16 @@ final class SkyPay_WC_Order_Manager {
 		$timestamp = time() + self::DELAYS[ $attempt ];
 		if ( function_exists( 'as_get_scheduled_actions' ) && function_exists( 'as_schedule_single_action' ) ) {
 			// Only pending jobs suppress enqueueing. A running job may need to retry lock contention.
-			$pending = as_get_scheduled_actions( array( 'hook' => self::ACTION_HOOK, 'args' => $args, 'group' => self::GROUP, 'status' => 'pending', 'per_page' => 1 ), 'ids' );
+			$pending = as_get_scheduled_actions(
+				array(
+					'hook'     => self::ACTION_HOOK,
+					'args'     => $args,
+					'group'    => self::GROUP,
+					'status'   => 'pending',
+					'per_page' => 1,
+				),
+				'ids'
+			);
 			$queued  = ! empty( $pending ) || 0 < as_schedule_single_action( $timestamp, self::ACTION_HOOK, $args, self::GROUP, false );
 		} else {
 			$queued = (bool) wp_next_scheduled( self::ACTION_HOOK, $args ) || true === wp_schedule_single_event( $timestamp, self::ACTION_HOOK, $args, true );
@@ -55,7 +64,14 @@ final class SkyPay_WC_Order_Manager {
 			if ( $order instanceof WC_Order ) {
 				self::note_once( $order, '_skypay_reconciliation_enqueue_failed', __( 'SkyPay could not schedule payment confirmation. Check scheduled actions and verify this payment manually.', 'skypay-woocommerce' ) );
 			}
-			wc_get_logger()->error( 'SkyPay reconciliation enqueue failed.', array( 'source' => self::GROUP, 'order_id' => $order_id, 'attempt' => $attempt ) );
+			wc_get_logger()->error(
+				'SkyPay reconciliation enqueue failed.',
+				array(
+					'source'   => self::GROUP,
+					'order_id' => $order_id,
+					'attempt'  => $attempt,
+				)
+			);
 		}
 		return $queued;
 	}
@@ -185,9 +201,7 @@ final class SkyPay_WC_Order_Manager {
 					// payment_complete() returns only after saving, but refresh before
 					// recording the SkyPay marker so a failing store extension cannot
 					// strand an unpaid order behind an irreversible local marker.
-					$order->get_data_store()->read( $order );
-					$order->read_meta_data( true );
-					if ( ! $order->is_paid() || null === $order->get_date_paid() ) {
+					if ( ! self::payment_completed_after_refresh( $order ) ) {
 						return false;
 					}
 					$order->update_meta_data( '_skypay_payment_completed', 'yes' );
@@ -216,6 +230,19 @@ final class SkyPay_WC_Order_Manager {
 				// Pending and unknown statuses never undo a review, failure, cancellation or payment.
 				return false;
 		}
+	}
+
+	/**
+	 * Reload the order before recording the irreversible local completion marker.
+	 *
+	 * @param WC_Order $order WooCommerce order.
+	 * @return bool True when WooCommerce persisted the paid state.
+	 */
+	private static function payment_completed_after_refresh( WC_Order $order ): bool {
+		$order->get_data_store()->read( $order );
+		$order->read_meta_data( true );
+
+		return $order->is_paid() && null !== $order->get_date_paid();
 	}
 
 	public static function handle_return(): void {
