@@ -103,7 +103,12 @@ final class SkyPay_WC_API_Client {
 					usleep( 200000 );
 					continue;
 				}
-				return new WP_Error( 'skypay_transport_error', __( 'SkyPay could not be reached. Please try again.', 'skypay-woocommerce' ) );
+				return new WP_Error(
+					'skypay_transport_error',
+					'POST' === $method
+						? __( 'SkyPay could not confirm whether this payment started. Check your order status before trying again.', 'skypay-woocommerce' )
+						: __( 'SkyPay could not be reached. Please try again.', 'skypay-woocommerce' )
+				);
 			}
 
 			$status = wp_remote_retrieve_response_code( $response );
@@ -133,17 +138,41 @@ final class SkyPay_WC_API_Client {
 						'status' => $status,
 					)
 				);
+				$code = is_array( $body ) && isset( $body['code'] ) && is_string( $body['code'] ) ? $body['code'] : '';
 				return new WP_Error(
 					'skypay_api_error',
-					__( 'SkyPay rejected the request. Check the gateway configuration and try again.', 'skypay-woocommerce' ),
-					array( 'status' => $status )
+					$this->checkout_error_message( $status, $code, $method ),
+					array( 'status' => $status, 'code' => $code )
 				);
 			}
 
 			return isset( $body['data'] ) && is_array( $body['data'] ) ? $body['data'] : array();
 		}
 
-		return new WP_Error( 'skypay_api_error', __( 'SkyPay request failed.', 'skypay-woocommerce' ) );
+		return new WP_Error( 'skypay_api_error', __( 'SkyPay could not confirm whether this payment started. Check your order status before trying again.', 'skypay-woocommerce' ) );
+	}
+
+	/** Return buyer guidance from stable API codes; never display API prose. */
+	private function checkout_error_message( int $status, string $code, string $method ): string {
+		if ( 'payment_already_paid' === $code ) {
+			return __( 'This order is already paid. Please check your order status.', 'skypay-woocommerce' );
+		}
+		if ( 'payment_in_progress' === $code || 409 === $status ) {
+			return __( 'A payment may already be in progress for this order. Check your order status before trying again.', 'skypay-woocommerce' );
+		}
+		if ( 'payment_link_expired' === $code ) {
+			return __( 'This payment link has expired. Please contact the store for a new link.', 'skypay-woocommerce' );
+		}
+		if ( 'rate_limited' === $code || 429 === $status ) {
+			return __( 'Too many payment requests. Wait a moment, then check your order status before trying again.', 'skypay-woocommerce' );
+		}
+		if ( 'POST' === $method && $status >= 500 ) {
+			return __( 'SkyPay could not confirm whether this payment started. Check your order status before trying again.', 'skypay-woocommerce' );
+		}
+		if ( 'validation_error' === $code || 400 === $status ) {
+			return __( 'SkyPay could not start this payment. Please contact the store for help.', 'skypay-woocommerce' );
+		}
+		return __( 'SkyPay is unavailable for this order right now. Please contact the store for help.', 'skypay-woocommerce' );
 	}
 
 	private function base_url(): string {

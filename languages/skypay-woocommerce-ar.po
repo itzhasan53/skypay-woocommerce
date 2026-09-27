@@ -25,17 +25,35 @@ msgstr "تتطلب إضافة سكاي باي لـ WooCommerce إصدار WooCom
 msgid "SkyPay could not be reached. Please try again."
 msgstr "تعذر الاتصال بسكاي باي. يرجى المحاولة مرة أخرى."
 
-msgid "SkyPay could not secure the checkout return. Please try again."
-msgstr "تعذر على سكاي باي تأمين عودة عملية الدفع. يرجى المحاولة مرة أخرى."
+msgid "SkyPay could not confirm whether this payment started. Check your order status before trying again."
+msgstr "تعذر تأكيد ما إذا كانت عملية الدفع قد بدأت. تحقق من حالة طلبك قبل المحاولة مرة أخرى."
 
-msgid "SkyPay could not secure the checkout request. Please try again."
-msgstr "تعذّر على سكاي باي تأمين طلب الدفع. حاول مرة أخرى."
+msgid "This order is already paid. Please check your order status."
+msgstr "تم دفع هذا الطلب بالفعل. يرجى التحقق من حالة طلبك."
 
-msgid "SkyPay rejected the request. Check the gateway configuration and try again."
-msgstr "رفضت سكاي باي الطلب. راجع إعدادات البوابة وحاول مرة أخرى."
+msgid "A payment may already be in progress for this order. Check your order status before trying again."
+msgstr "قد تكون هناك عملية دفع جارية لهذا الطلب. تحقق من حالة طلبك قبل المحاولة مرة أخرى."
 
-msgid "SkyPay request failed."
-msgstr "فشل طلب سكاي باي."
+msgid "This payment link has expired. Please contact the store for a new link."
+msgstr "انتهت صلاحية رابط الدفع. تواصل مع المتجر للحصول على رابط جديد."
+
+msgid "Too many payment requests. Wait a moment, then check your order status before trying again."
+msgstr "هناك طلبات دفع كثيرة خلال وقت قصير. انتظر قليلاً ثم تحقق من حالة طلبك قبل المحاولة مرة أخرى."
+
+msgid "SkyPay could not start this payment. Please contact the store for help."
+msgstr "تعذر بدء عملية الدفع عبر سكاي باي. تواصل مع المتجر للحصول على المساعدة."
+
+msgid "SkyPay is unavailable for this order right now. Please contact the store for help."
+msgstr "سكاي باي غير متاح لهذا الطلب حالياً. تواصل مع المتجر للحصول على المساعدة."
+
+msgid "This order amount cannot be paid with SkyPay. Please contact the store for help."
+msgstr "لا يمكن دفع مبلغ هذا الطلب عبر سكاي باي. تواصل مع المتجر للحصول على المساعدة."
+
+msgid "We could not open payment for this order. Check its status before trying again."
+msgstr "تعذر فتح الدفع لهذا الطلب. تحقق من حالته قبل المحاولة مرة أخرى."
+
+msgid "We could not open payment for this order. Please contact the store."
+msgstr "تعذر فتح الدفع لهذا الطلب. يرجى التواصل مع المتجر."
 
 msgid "SkyPay order reference is missing."
 msgstr "مرجع طلب سكاي باي مفقود."
@@ -64,8 +82,8 @@ msgstr "تعذّر جدولة تأكيد الدفع من سكاي باي. راج
 msgid "SkyPay is already updating this order. Please try again shortly."
 msgstr "يجري سكاي باي تحديث هذا الطلب الآن. حاول مرة أخرى بعد قليل."
 
-msgid "This order cannot start another SkyPay payment."
-msgstr "لا يمكن بدء عملية دفع جديدة عبر سكاي باي لهذا الطلب."
+msgid "This order cannot start another payment right now. Check its status or contact the store."
+msgstr "لا يمكن بدء عملية دفع أخرى لهذا الطلب الآن. تحقق من حالته أو تواصل مع المتجر."
 
 msgid "The customer returned from SkyPay using the cancellation path. Payment confirmation is still pending."
 msgstr "عاد العميل من سكاي باي عبر مسار الإلغاء. لا يزال تأكيد الدفع معلقاً."
@@ -145,23 +163,18 @@ msgstr "سجل هذا الرابط لحدث payment.completed في قسم الم
 msgid "Test connection"
 msgstr "اختبار الاتصال"
 
-msgid "The WooCommerce order could not be loaded."
-msgstr "تعذر تحميل طلب WooCommerce."
+msgid "We could not open this order. Refresh the page or contact the store."
+msgstr "تعذر فتح هذا الطلب. حدّث الصفحة أو تواصل مع المتجر."
 
 msgid "SkyPay supports LYD orders only."
 msgstr "تدعم سكاي باي الطلبات بعملة الدينار الليبي فقط."
 
-msgid "The existing SkyPay checkout no longer matches this order. Please contact the store administrator."
-msgstr "لم تعد صفحة دفع سكاي باي الحالية تطابق هذا الطلب. يرجى التواصل مع مدير المتجر."
+msgid "This order changed after payment was started. Please contact the store before paying again."
+msgstr "تغير هذا الطلب بعد بدء الدفع. يرجى التواصل مع المتجر قبل الدفع مرة أخرى."
 
 msgid "WooCommerce order #%s"
 msgstr "طلب WooCommerce رقم %s"
 
-msgid "SkyPay returned an invalid checkout response."
-msgstr "أعادت سكاي باي استجابة دفع غير صالحة."
-
-msgid "SkyPay returned a checkout for a different merchant. Please contact the store administrator."
-msgstr "أعادت سكاي باي صفحة دفع تخص تاجراً آخر. يرجى التواصل مع مدير المتجر."
 
 msgid "The configured SkyPay mode no longer matches this order."
 msgstr "لم يعد وضع سكاي باي المحدد يطابق هذا الطلب."

@@ -25,6 +25,14 @@ define( 'SKYPAY_WC_FILE', __FILE__ );
 define( 'SKYPAY_WC_PATH', plugin_dir_path( __FILE__ ) );
 define( 'SKYPAY_WC_URL', plugin_dir_url( __FILE__ ) );
 
+add_action(
+	'init',
+	static function (): void {
+		load_plugin_textdomain( 'skypay-woocommerce', false, dirname( plugin_basename( __FILE__ ) ) . '/languages' );
+	},
+	0
+);
+
 register_activation_hook(
 	__FILE__,
 	static function (): void {

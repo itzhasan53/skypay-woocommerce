@@ -204,7 +204,7 @@ final class SkyPay_WC_Gateway extends WC_Payment_Gateway {
 	private function process_locked_payment( int $order_id, SkyPay_WC_Order_Lock $lock ): ?array {
 		$order = $lock->load_order( $order_id );
 		if ( ! $order instanceof WC_Order ) {
-			wc_add_notice( __( 'The WooCommerce order could not be loaded.', 'skypay-woocommerce' ), 'error' );
+			wc_add_notice( __( 'We could not open this order. Refresh the page or contact the store.', 'skypay-woocommerce' ), 'error' );
 			return null;
 		}
 		if ( 'LYD' !== strtoupper( (string) $order->get_currency() ) ) {
@@ -212,14 +212,14 @@ final class SkyPay_WC_Gateway extends WC_Payment_Gateway {
 			return null;
 		}
 		if ( SkyPay_WC_Order_Manager::is_protected( $order ) || $order->has_status( 'cancelled' ) ) {
-			wc_add_notice( __( 'This order cannot start another SkyPay payment.', 'skypay-woocommerce' ), 'error' );
+			wc_add_notice( __( 'This order cannot start another payment right now. Check its status or contact the store.', 'skypay-woocommerce' ), 'error' );
 			return null;
 		}
 
 		try {
 			$amount_fils = SkyPay_WC_Amount::to_fils( (string) $order->get_total() );
 		} catch ( InvalidArgumentException $error ) {
-			wc_add_notice( esc_html( $error->getMessage() ), 'error' );
+			wc_add_notice( __( 'This order amount cannot be paid with SkyPay. Please contact the store for help.', 'skypay-woocommerce' ), 'error' );
 			return null;
 		}
 
@@ -228,7 +228,7 @@ final class SkyPay_WC_Gateway extends WC_Payment_Gateway {
 		$existing_mode   = (string) $order->get_meta( '_skypay_mode', true );
 		$existing_amount = (int) $order->get_meta( '_skypay_amount_fils', true );
 		if ( '' !== (string) $order->get_meta( '_skypay_merchant_order_id', true ) && ( $existing_mode !== $mode || $existing_amount !== $amount_fils ) ) {
-			wc_add_notice( __( 'The existing SkyPay checkout no longer matches this order. Please contact the store administrator.', 'skypay-woocommerce' ), 'error' );
+			wc_add_notice( __( 'This order changed after payment was started. Please contact the store before paying again.', 'skypay-woocommerce' ), 'error' );
 			return null;
 		}
 		if ( '' !== $existing_url ) {
@@ -244,7 +244,7 @@ final class SkyPay_WC_Gateway extends WC_Payment_Gateway {
 				);
 			}
 
-			wc_add_notice( __( 'The existing SkyPay checkout no longer matches this order. Please contact the store administrator.', 'skypay-woocommerce' ), 'error' );
+			wc_add_notice( __( 'This order changed after payment was started. Please contact the store before paying again.', 'skypay-woocommerce' ), 'error' );
 			return null;
 		}
 
@@ -262,7 +262,7 @@ final class SkyPay_WC_Gateway extends WC_Payment_Gateway {
 				$return_token = bin2hex( random_bytes( 32 ) );
 				$order->update_meta_data( '_skypay_return_token_encrypted', SkyPay_WC_Crypto::encrypt( $return_token ) );
 			} catch ( Throwable $error ) {
-				wc_add_notice( __( 'SkyPay could not secure the checkout return. Please try again.', 'skypay-woocommerce' ), 'error' );
+				wc_add_notice( __( 'We could not open payment for this order. Check its status before trying again.', 'skypay-woocommerce' ), 'error' );
 				return null;
 			}
 		}
@@ -306,7 +306,7 @@ final class SkyPay_WC_Gateway extends WC_Payment_Gateway {
 				}
 				$order->update_meta_data( '_skypay_create_payload', SkyPay_WC_Crypto::encrypt( $encoded_payload ) );
 			} catch ( Throwable $error ) {
-				wc_add_notice( __( 'SkyPay could not secure the checkout request. Please try again.', 'skypay-woocommerce' ), 'error' );
+				wc_add_notice( __( 'We could not open payment for this order. Check its status before trying again.', 'skypay-woocommerce' ), 'error' );
 				return null;
 			}
 		}
@@ -339,13 +339,13 @@ final class SkyPay_WC_Gateway extends WC_Payment_Gateway {
 			'LYD' !== strtoupper( (string) ( $result['currency'] ?? '' ) ) ||
 			strtoupper( (string) ( $result['mode'] ?? '' ) ) !== $mode
 		) {
-			wc_add_notice( __( 'SkyPay returned an invalid checkout response.', 'skypay-woocommerce' ), 'error' );
+			wc_add_notice( __( 'We could not open payment for this order. Please contact the store.', 'skypay-woocommerce' ), 'error' );
 			return null;
 		}
 		$merchant_id          = sanitize_text_field( $result['merchantId'] );
 		$existing_merchant_id = (string) $order->get_meta( '_skypay_merchant_id', true );
 		if ( '' !== $existing_merchant_id && ! hash_equals( $existing_merchant_id, $merchant_id ) ) {
-			wc_add_notice( __( 'SkyPay returned a checkout for a different merchant. Please contact the store administrator.', 'skypay-woocommerce' ), 'error' );
+			wc_add_notice( __( 'We could not open payment for this order. Please contact the store.', 'skypay-woocommerce' ), 'error' );
 			return null;
 		}
 
