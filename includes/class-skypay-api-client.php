@@ -142,7 +142,10 @@ final class SkyPay_WC_API_Client {
 				return new WP_Error(
 					'skypay_api_error',
 					$this->checkout_error_message( $status, $code, $method ),
-					array( 'status' => $status, 'code' => $code )
+					array(
+						'status' => $status,
+						'code'   => $code,
+					)
 				);
 			}
 
@@ -152,7 +155,14 @@ final class SkyPay_WC_API_Client {
 		return new WP_Error( 'skypay_api_error', __( 'SkyPay could not confirm whether this payment started. Check your order status before trying again.', 'skypay-woocommerce' ) );
 	}
 
-	/** Return buyer guidance from stable API codes; never display API prose. */
+	/**
+	 * Return buyer guidance from stable API codes; never display API prose.
+	 *
+	 * @param int    $status HTTP status returned by SkyPay.
+	 * @param string $code   Stable SkyPay error code, or an empty string.
+	 * @param string $method HTTP method of the failed request.
+	 * @return string Translated buyer-facing message.
+	 */
 	private function checkout_error_message( int $status, string $code, string $method ): string {
 		if ( 'payment_already_paid' === $code ) {
 			return __( 'This order is already paid. Please check your order status.', 'skypay-woocommerce' );

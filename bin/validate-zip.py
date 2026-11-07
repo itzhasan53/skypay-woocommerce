@@ -18,6 +18,7 @@ required = {
     "skypay-woocommerce/languages/skypay-woocommerce-ar.mo",
 }
 forbidden_fragments = (
+    "AGENTS.md",
     ".env",
     ".git/",
     ".phpunit.cache/",

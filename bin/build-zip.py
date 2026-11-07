@@ -22,6 +22,7 @@ EXCLUDED_PARTS = {
     "vendor",
 }
 EXCLUDED_FILES = {
+    "AGENTS.md",
     ".distignore",
     ".gitignore",
     ".wp-env.json",

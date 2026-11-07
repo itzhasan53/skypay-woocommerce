@@ -2,10 +2,10 @@
 Contributors: skypay
 Tags: payments, libya, lyd, hosted checkout, woocommerce
 Requires at least: 6.4
-Tested up to: 6.8
+Tested up to: 7.1
 Requires PHP: 8.1
 WC requires at least: 9.0
-WC tested up to: 10.0
+WC tested up to: 11.2
 Stable tag: 0.1.0-beta.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
