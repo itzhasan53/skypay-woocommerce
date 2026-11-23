@@ -25,7 +25,17 @@ final class SkyPay_WC_Gateway extends WC_Payment_Gateway {
 		$this->enabled     = (string) $this->get_option( 'enabled', 'no' );
 
 		add_action( 'woocommerce_update_options_payment_gateways_' . $this->id, array( $this, 'process_admin_options' ) );
-		add_action( 'wp_ajax_skypay_wc_test_connection', array( $this, 'ajax_test_connection' ) );
+	}
+
+	/**
+	 * Answer the Test connection button.
+	 *
+	 * This is registered by the plugin bootstrap, not by the constructor: WooCommerce creates gateway objects lazily and does
+	 * not create them during admin-ajax.php requests, so a handler registered in the constructor would not exist when the
+	 * button's request arrives.
+	 */
+	public static function handle_test_connection_request(): void {
+		( new self() )->ajax_test_connection();
 	}
 
 	public function init_form_fields(): void {
@@ -424,9 +434,13 @@ final class SkyPay_WC_Gateway extends WC_Payment_Gateway {
 			wp_send_json_error( array( 'message' => __( 'You are not allowed to manage WooCommerce payments.', 'skypay-woocommerce' ) ), 403 );
 		}
 
+		if ( '' === $this->api_key() ) {
+			wp_send_json_error( array( 'message' => __( 'Enter the SkyPay API key and save the settings before testing the connection.', 'skypay-woocommerce' ) ), 400 );
+		}
+
 		$result = $this->client()->connection();
 		if ( is_wp_error( $result ) ) {
-			wp_send_json_error( array( 'message' => $result->get_error_message() ), 400 );
+			wp_send_json_error( array( 'message' => $this->connection_error_message( $result ) ), 400 );
 		}
 		if (
 			empty( $result['connected'] ) ||
@@ -450,6 +464,28 @@ final class SkyPay_WC_Gateway extends WC_Payment_Gateway {
 				),
 			)
 		);
+	}
+
+	/**
+	 * Explain a failed connection test to the administrator.
+	 *
+	 * The API client's own messages are written for shoppers, so they are not shown here.
+	 *
+	 * @param WP_Error $error Error returned by the API client.
+	 */
+	private function connection_error_message( WP_Error $error ): string {
+		$data   = $error->get_error_data();
+		$status = is_array( $data ) ? (int) ( $data['status'] ?? 0 ) : 0;
+		if ( 401 === $status || 403 === $status ) {
+			return __( 'SkyPay rejected the API key. Check that it is correct, active and not revoked, then save the settings and test again.', 'skypay-woocommerce' );
+		}
+		if ( 429 === $status ) {
+			return __( 'SkyPay is receiving too many requests from this store. Wait a minute and test again.', 'skypay-woocommerce' );
+		}
+		if ( 0 === $status ) {
+			return __( 'SkyPay could not be reached from this server. Check that it can make outbound HTTPS requests, then test again.', 'skypay-woocommerce' );
+		}
+		return __( 'SkyPay returned an unexpected response. Try again shortly.', 'skypay-woocommerce' );
 	}
 
 	private function client(): SkyPay_WC_API_Client {

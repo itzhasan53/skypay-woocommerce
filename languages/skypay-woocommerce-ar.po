@@ -157,6 +157,21 @@ msgstr "جارٍ الاختبار…"
 msgid "Connection failed."
 msgstr "فشل الاتصال."
 
+msgid "Enter the SkyPay API key and save the settings before testing the connection."
+msgstr "أدخل مفتاح API الخاص بسكاي باي واحفظ الإعدادات قبل اختبار الاتصال."
+
+msgid "SkyPay rejected the API key. Check that it is correct, active and not revoked, then save the settings and test again."
+msgstr "رفضت سكاي باي مفتاح API. تأكد أنه صحيح ونشط وغير ملغى، ثم احفظ الإعدادات وأعد الاختبار."
+
+msgid "SkyPay is receiving too many requests from this store. Wait a minute and test again."
+msgstr "تتلقى سكاي باي طلبات كثيرة جداً من هذا المتجر. انتظر دقيقة ثم أعد الاختبار."
+
+msgid "SkyPay could not be reached from this server. Check that it can make outbound HTTPS requests, then test again."
+msgstr "تعذر الوصول إلى سكاي باي من هذا الخادم. تأكد أنه يستطيع إجراء طلبات HTTPS صادرة، ثم أعد الاختبار."
+
+msgid "SkyPay returned an unexpected response. Try again shortly."
+msgstr "أعادت سكاي باي استجابة غير متوقعة. حاول مرة أخرى بعد قليل."
+
 msgid "Register this URL for payment.completed in SkyPay Developers."
 msgstr "سجل هذا الرابط لحدث payment.completed في قسم المطورين بسكاي باي."
 

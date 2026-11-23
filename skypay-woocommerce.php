@@ -92,6 +92,8 @@ function skypay_wc_bootstrap(): void {
 
 	SkyPay_WC_Order_Manager::init();
 	SkyPay_WC_Webhook_Controller::init();
+	// Registered here, not in the gateway constructor: WooCommerce does not create gateways during admin-ajax.php requests.
+	add_action( 'wp_ajax_skypay_wc_test_connection', array( 'SkyPay_WC_Gateway', 'handle_test_connection_request' ) );
 }
 add_action( 'plugins_loaded', 'skypay_wc_bootstrap', 20 );
 

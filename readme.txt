@@ -76,6 +76,8 @@ See `privacy.md` included with the plugin.
 
 = 0.1.0-beta.3 =
 
+* Fixed the Test connection button, which failed with "Connection failed." on current WooCommerce versions because its request handler only existed when WooCommerce had created the gateway object (it does not during admin AJAX requests).
+* Test connection now tells administrators when the API key is missing, rejected or unreachable, instead of showing a message written for shoppers.
 * Added per-order locking for checkout creation, signed webhook handling, return verification, and reconciliation.
 * Added HPOS-safe reliability checks for duplicate webhooks and protected paid orders.
 * Hardened reconciliation scheduling and dependency checks.
