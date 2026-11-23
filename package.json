@@ -27,6 +27,7 @@
     },
     "ignore-walk": {
       "minimatch": "3.1.5"
-    }
+    },
+    "isomorphic-git": "1.38.6"
   }
 }
